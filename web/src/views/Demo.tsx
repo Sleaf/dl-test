@@ -98,6 +98,7 @@ class Demo extends PureComponent {
       this.setState({ model });
     });
     window.addEventListener('resize', this.updatePosition);
+    document.body.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
   }
 
   componentDidUpdate(prevProps, prevState: any) {
@@ -108,6 +109,7 @@ class Demo extends PureComponent {
 
   componentWillUnmount(): void {
     window.removeEventListener('resize', this.updatePosition);
+    document.body.removeEventListener('touchmove', e => e.preventDefault(), { passive: false });
   }
 
   startDraw = (event) => {

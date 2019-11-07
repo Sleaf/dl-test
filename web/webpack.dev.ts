@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import fs from 'fs';
 import merge from 'webpack-merge';
-import common, { __isWindows__ } from './webpack.common';
+import common from './webpack.common';
 
 const args = require('minimist')(process.argv);
 
@@ -15,11 +15,12 @@ export default merge(common, {
     disableHostCheck: true,
     historyApiFallback: true,
     compress: true,
-    host: ENABLE_SSL || __isWindows__ ? 'localhost' : '0.0.0.0',
+    host: '0.0.0.0',
+    publicPath: '/dl-test/',
     port: Number(process.env.PORT) || 2000,
     https: ENABLE_SSL && {
       key: fs.readFileSync(resolve(__dirname, 'ssl/ssl.localhost.key')),
-      cert: fs.readFileSync(resolve(__dirname, 'ssl/ssl.localhost.crt'))
+      cert: fs.readFileSync(resolve(__dirname, 'ssl/ssl.localhost.crt')),
     },
     proxy: {
       '/api': {

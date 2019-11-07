@@ -22,7 +22,7 @@ export default {
   output: {
     path: resolve(__dirname, '../docs'),
     filename: 'resources/js/[name].[hash].js',
-    publicPath: '/',
+    publicPath: '/dl-test/',
   },
   module: {
     rules: [
@@ -45,12 +45,19 @@ export default {
           ]),
       },
       {
-        test: /\.(jpe?g|png|gif|webp|bin)$/,
+        test: /\.(jpe?g|png|gif|webp)$/,
         loader: 'url-loader',
         options: {
           limit: 1,
-          publicPath: '/',
           name: `resources/images/[hash].[ext]`,
+        },
+      },
+      {
+        test: /\.bin$/,
+        loader: 'url-loader',
+        options: {
+          limit: 1,
+          name: `resources/model/[hash].[ext]`,
         },
       },
       {
@@ -62,7 +69,6 @@ export default {
           hash: 'sha512',
           digest: 'hex',
           name: `resources/fonts/[hash].[ext]`,
-          publicPath: '/',
         },
       },
     ],
