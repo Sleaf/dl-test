@@ -1,5 +1,6 @@
 // modules
 declare module 'keras-js';
+declare module '*.bin';
 
 // global define, see `DefinePlugin`
 declare const __isPrd__: boolean; // 是否为prd

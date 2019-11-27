@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import React, { PureComponent, MouseEvent, TouchEvent } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import modelInfo from '../assets/model/number.json';
 import DLModel from '../assets/model/number.bin';
@@ -23,12 +23,20 @@ const loadModel = async () => {
   return await tf.models.modelFromJSON(modelInfo2);
 };
 
+type Position = {
+  x: number;
+  y: number;
+}
+
 // position
-const getPagePosition = (event) => event.changedTouches && event.changedTouches[0] || event;
-const getXYPosition = (event, basePosition) => [getPagePosition(event).pageX - basePosition.x, getPagePosition(event).pageY - basePosition.y];
+const getPagePosition = (event: MouseEvent | TouchEvent) => {
+  const assertEvent = event as TouchEvent;
+  return assertEvent.changedTouches && assertEvent.changedTouches[0] || event as MouseEvent;
+};
+const getXYPosition = (event: MouseEvent | TouchEvent, basePosition: Position) => [getPagePosition(event).pageX - basePosition.x, getPagePosition(event).pageY - basePosition.y];
 
 // deal
-const to2d = (grayList) => {
+const to2d = (grayList: Array<number>) => {
   const result = [];  // length: MODEL_WIDTH * MODEL_HEIGHT, 为实际模型输入结构
   for (let x = 0; x < MODEL_WIDTH; x++) {
     for (let y = 0; y < MODEL_HEIGHT; y++) {
@@ -46,7 +54,7 @@ const to2d = (grayList) => {
   console.log('InputData:', result);
   return tf.tensor([result]); // 增加一维batch
 };
-const to4d = (grayList) => {
+const to4d = (grayList: Array<number>) => {
   const result = [];  // length: MODEL_WIDTH * MODEL_HEIGHT, 为实际模型输入结构
   for (let x = 0; x < MODEL_WIDTH; x++) {
     const xArray = [];
@@ -81,17 +89,22 @@ const img2Tensor = (fullData: Uint8ClampedArray) => {
   return to4d(grayList);
 };
 
-class Demo extends PureComponent {
-  canvas = null;
-  ctx = null;
+type State = {
+  model: tf.LayersModel | null;
+  result: string | null,
+}
+
+class Demo extends PureComponent<never, State> {
+  canvas: HTMLCanvasElement | null = null;
+  ctx: CanvasRenderingContext2D | null = null;
   basePosition = { x: 0, y: 0 };
   isDrawing = false;
-  state = {
+  state: State = {
     model: null,
     result: null,
   };
 
-  constructor(props) {
+  constructor(props: never) {
     super(props);
     void loadModel().then((model) => {
       console.log('Model:', model);
@@ -101,7 +114,7 @@ class Demo extends PureComponent {
     document.body.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
   }
 
-  componentDidUpdate(prevProps, prevState: any) {
+  componentDidUpdate(prevProps: never, prevState: any) {
     if (prevState.model == null && this.canvas) {
       this.updatePosition();
     }
@@ -109,56 +122,61 @@ class Demo extends PureComponent {
 
   componentWillUnmount(): void {
     window.removeEventListener('resize', this.updatePosition);
-    document.body.removeEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    document.body.removeEventListener('touchmove', e => e.preventDefault());
   }
 
-  startDraw = (event) => {
+  startDraw = (event: MouseEvent | TouchEvent) => {
     const [positionX, positionY] = getXYPosition(event, this.basePosition);
     this.isDrawing = true;
-    this.ctx.beginPath();
-    this.ctx.moveTo(positionX, positionY);
+    this.ctx?.beginPath();
+    this.ctx?.moveTo(positionX, positionY);
   };
-  drawing = (event) => {
+  drawing = (event: MouseEvent | TouchEvent) => {
     if (this.isDrawing) {
       const [positionX, positionY] = getXYPosition(event, this.basePosition);
-      this.ctx.lineTo(positionX, positionY);
-      this.ctx.stroke();
+      this.ctx?.lineTo(positionX, positionY);
+      this.ctx?.stroke();
     }
   };
   endDraw = () => {
-    if (this.isDrawing) {
+    if (this.isDrawing && this.ctx) {
       this.isDrawing = false;
       this.ctx.closePath();
       this.getResult();
     }
   };
   clear = () => {
-    this.ctx.fillStyle = 'white'; // 背景颜色
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.setState({ result: null });
+    if (this.canvas && this.ctx) {
+      this.ctx.fillStyle = 'white'; // 背景颜色
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.setState({ result: null });
+    }
   };
 
   updatePosition = () => {
-    this.ctx = this.canvas.getContext('2d');
-    // canvas configs
-    this.ctx.fillStyle = 'white'; // 背景颜色
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.strokeStyle = 'black'; // 画笔颜色
-    this.ctx.lineWidth = 15; // 线条宽度
-    // update position
-    this.basePosition = {
-      x: this.canvas.getBoundingClientRect().left,
-      y: this.canvas.getBoundingClientRect().top,
-    };
+    this.ctx = this.canvas?.getContext('2d')!;
+    if (this.canvas && this.ctx) {
+      // canvas configs
+      this.ctx.fillStyle = 'white'; // 背景颜色
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.strokeStyle = 'black'; // 画笔颜色
+      this.ctx.lineWidth = 15; // 线条宽度
+      // update position
+      this.basePosition = {
+        x: this.canvas.getBoundingClientRect().left,
+        y: this.canvas.getBoundingClientRect().top,
+      };
+    }
   };
   getResult = async () => {
-    const ctx = this.canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
-    const outputData = await this.state.model.predict(img2Tensor(imageData));
-    const predictArray = (await outputData.array())[0];
-    console.log('predict:', predictArray);
-    const max = Math.max(...predictArray);
-    this.setState({ result: predictArray.indexOf(max) });
+    if (this.canvas && this.ctx) {
+      const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+      const outputData = await this.state.model!.predict(img2Tensor(imageData));
+      const predictArray = (await (outputData as any).array())[0];
+      console.log('predict:', predictArray);
+      const max = Math.max(...predictArray);
+      this.setState({ result: predictArray.indexOf(max) });
+    }
   };
 
   render() {
